@@ -11,6 +11,10 @@ func SetupRouter(mode string) *gin.Engine {
 	gin.SetMode(mode)
 	r := gin.Default()
 
+	r.Use(func(c *gin.Context) {
+		c.Set("mode", mode)
+	})
+
 	r.GET("/healthz", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"ok": true,

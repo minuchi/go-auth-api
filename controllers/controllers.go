@@ -1,11 +1,14 @@
 package controllers
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+	"github.com/minuchi/go-auth-api/controllers/auth"
+)
 
 func LoadAuth(r *gin.RouterGroup) {
-	r.GET("/time", GetTime)
-	r.POST("/login", Login)
-	r.POST("/signup", SignUp)
-	r.GET("/token", IssueAccessToken)
-	r.GET("/verify", Verify)
+	r.GET("/time", auth.GetTime)
+	r.POST("/login", auth.Login)
+	r.POST("/signup", auth.SignUp)
+	r.GET("/token", auth.IssueAccessToken)
+	r.GET("/verify", auth.Verify)
 }
