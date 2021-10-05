@@ -1,7 +1,10 @@
 package auth
 
 import (
+	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,6 +18,31 @@ type signupRequest struct {
 
 type getTimeResponse struct {
 	Time string `json:"time"`
+}
+
+func checkPasswordStrength(password string) string {
+	const MinimumPasswordLength = 8
+	length := len(password)
+	if length < MinimumPasswordLength {
+		return fmt.Sprintf("less_than_%d", MinimumPasswordLength)
+	}
+
+	// TODO: All special characters should be included.
+	patterns := map[string]string{
+		"01|number":            "[0-9]",
+		"02|lowercase":         "[a-z]",
+		"03|uppercase":         "[A-Z]",
+		"04|special_character": "[!@#$%^&:;?]",
+	}
+
+	for name, pattern := range patterns {
+		result, _ := regexp.MatchString(pattern, password)
+		if result == false {
+			return strings.Split(name, "|")[1]
+		}
+	}
+
+	return ""
 }
 
 func returnOK(c *gin.Context) {
@@ -39,6 +67,12 @@ func SignUp(c *gin.Context) {
 	var body signupRequest
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	weakName := checkPasswordStrength(body.Password)
+	if weakName != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": weakName})
 		return
 	}
 

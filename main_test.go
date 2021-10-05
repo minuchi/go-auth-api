@@ -63,8 +63,8 @@ func TestGetTimeRoute(t *testing.T) {
 func TestSignUpRoute(t *testing.T) {
 	data := gin.H{
 		"email":            "go.gin@abc.com",
-		"password":         "abcd1234!@",
-		"password_confirm": "abcd1234!@",
+		"password":         "Abcd1234!@",
+		"password_confirm": "Abcd1234!@",
 	}
 
 	t.Run("should be success when request body is correctly filled", func(t *testing.T) {
@@ -74,6 +74,30 @@ func TestSignUpRoute(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
+
+	disallowedPasswordMap := map[string]string{
+		"lowercase":         "ASDF1234!",
+		"special_character": "Asdf1234",
+		"uppercase":         "asdf1234!",
+		"number":            "Asdf!@#$",
+		"less_than_8":       "Aa1!",
+	}
+
+	for errName, disallowedPassword := range disallowedPasswordMap {
+		t.Run(fmt.Sprintf("should be failed with weak password like %s", disallowedPassword), func(t *testing.T) {
+			tmp := data
+			tmp["password"] = disallowedPassword
+			tmp["password_confirm"] = disallowedPassword
+			body := convertJsonToBody(tmp)
+
+			w := request("POST", "/api/auth/v1/signup", body)
+
+			assert.Equal(t, http.StatusBadRequest, w.Code)
+
+			resp := lib.ParseJSON(w.Body.Bytes())
+			assert.Equal(t, errName, resp["error"])
+		})
+	}
 
 	for key := range data {
 		t.Run(fmt.Sprintf("should be failed when %s is not included in request body", key), func(t *testing.T) {
