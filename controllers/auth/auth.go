@@ -2,12 +2,10 @@ package auth
 
 import (
 	"fmt"
-	"net/http"
-	"regexp"
-	"strings"
-	"time"
-
 	"github.com/gin-gonic/gin"
+	"net/http"
+	"time"
+	"unicode"
 )
 
 type signupRequest struct {
@@ -27,22 +25,38 @@ func checkPasswordStrength(password string) string {
 		return fmt.Sprintf("less_than_%d", MinimumPasswordLength)
 	}
 
-	// TODO: All special characters should be included.
-	patterns := map[string]string{
-		"01|number":            "[0-9]",
-		"02|lowercase":         "[a-z]",
-		"03|uppercase":         "[A-Z]",
-		"04|special_character": "[!@#$%^&:;?]",
-	}
+	var (
+		hasUpper   = false
+		hasLower   = false
+		hasNumber  = false
+		hasSpecial = false
+	)
 
-	for name, pattern := range patterns {
-		result, _ := regexp.MatchString(pattern, password)
-		if result == false {
-			return strings.Split(name, "|")[1]
+	// TODO: use go routine.
+	for _, char := range password {
+		switch {
+		case unicode.IsUpper(char):
+			hasUpper = true
+		case unicode.IsLower(char):
+			hasLower = true
+		case unicode.IsNumber(char):
+			hasNumber = true
+		case unicode.IsPunct(char) || unicode.IsSymbol(char):
+			hasSpecial = true
 		}
 	}
 
-	return ""
+	if hasNumber == false {
+		return "number"
+	} else if hasLower == false {
+		return "lowercase"
+	} else if hasUpper == false {
+		return "uppercase"
+	} else if hasSpecial == false {
+		return "special_character"
+	} else {
+		return ""
+	}
 }
 
 func returnOK(c *gin.Context) {
@@ -70,9 +84,9 @@ func SignUp(c *gin.Context) {
 		return
 	}
 
-	weakName := checkPasswordStrength(body.Password)
-	if weakName != "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": weakName})
+	vulnerability := checkPasswordStrength(body.Password)
+	if vulnerability != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": vulnerability})
 		return
 	}
 

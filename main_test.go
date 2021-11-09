@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/brianvoe/gofakeit/v6"
 	"io"
 	"log"
 	"net/http"
@@ -60,9 +61,66 @@ func TestGetTimeRoute(t *testing.T) {
 	assert.Less(t, diff, time.Second*2)
 }
 
+func TestLoginRoute(t *testing.T) {
+	// TODO: add defer to delete user after test.
+	userEmail := gofakeit.Email()
+	userPassword := gofakeit.Password(true, true, true, true, false, 10)
+	signUpData := gin.H{
+		"email":            userEmail,
+		"password":         userPassword,
+		"password_confirm": userPassword,
+	}
+
+	signUpBody := convertJsonToBody(signUpData)
+
+	w := request("POST", "/api/auth/v1/signup", signUpBody)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	t.Run("should be logged in", func(t *testing.T) {
+		loginData := gin.H{
+			"email":    userEmail,
+			"password": userPassword,
+		}
+
+		loginBody := convertJsonToBody(loginData)
+
+		w := request("POST", "/api/auth/v1/login", loginBody)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("should be failed to log in with wrong email", func(t *testing.T) {
+		loginData := gin.H{
+			"email":    gofakeit.Email(),
+			"password": userPassword,
+		}
+
+		loginBody := convertJsonToBody(loginData)
+
+		w := request("POST", "/api/auth/v1/login", loginBody)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("should be failed to log in with wrong password", func(t *testing.T) {
+		randomPassword := gofakeit.Password(true, true, true, true, false, 12)
+		loginData := gin.H{
+			"email":    userEmail,
+			"password": randomPassword,
+		}
+
+		loginBody := convertJsonToBody(loginData)
+
+		w := request("POST", "/api/auth/v1/login", loginBody)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+}
+
 func TestSignUpRoute(t *testing.T) {
 	data := gin.H{
-		"email":            "go.gin@abc.com",
+		"email":            "go.gin.signup@abc.com",
 		"password":         "Abcd1234!@",
 		"password_confirm": "Abcd1234!@",
 	}
